@@ -34,37 +34,39 @@ int main(int argc, char *argv[])
     advertisingData.setServices(QList<QBluetoothUuid>() << QBluetoothUuid::CyclingSpeedAndCadence);
 
     // SET UP CHARACTERISTIC DATA FOR SPEED MEASUREMENT
-    QLowEnergyCharacteristicData charData;
-    charData.setUuid(QBluetoothUuid::CSCMeasurement);
-    charData.setValue(QByteArray(2, 0));
-    charData.setProperties(QLowEnergyCharacteristic::Notify);
+    QLowEnergyCharacteristicData cscMeasurementData;
+    cscMeasurementData.setUuid(QBluetoothUuid::CSCMeasurement);
+    cscMeasurementData.setValue(QByteArray(2, 0));
+    cscMeasurementData.setProperties(QLowEnergyCharacteristic::Notify);
     const QLowEnergyDescriptorData clientConfig(QBluetoothUuid::ClientCharacteristicConfiguration,
                                                 QByteArray(2, 0));
-    charData.addDescriptor(clientConfig);
+    cscMeasurementData.addDescriptor(clientConfig);
 
     // SET UP CHARACTERISTIC DATA FOR WEEL REVOLUTION DATA
-    QLowEnergyCharacteristicData cscDescData;
-    cscDescData.setUuid(QBluetoothUuid::CSCFeature);
+    QLowEnergyCharacteristicData cscDescriptionData;
+    cscDescriptionData.setUuid(QBluetoothUuid::CSCFeature);
+    QByteArray cscDescriptionBytes;
     // first value is the "Wheel Revolution Data Present" flag
+    cscDescriptionBytes.append(char(1));
     // second value is the "Crank Revolution Data Present" flag
-    const char cscDescriptionBytes[] = {0x01, 0x00};
-    cscDescData.setValue(QByteArray(cscDescriptionBytes, 2));
-    cscDescData.setProperties(QLowEnergyCharacteristic::Read);
+    cscDescriptionBytes.append(char(0));
+    cscDescriptionData.setValue(cscDescriptionBytes);
+    cscDescriptionData.setProperties(QLowEnergyCharacteristic::Read);
 
     // SET UP SENSOR LOCATION.  USE RIGHT CRANK FOR IT
-    QLowEnergyCharacteristicData cscLocData;
-    cscLocData.setUuid(QBluetoothUuid::SensorLocation);
+    QLowEnergyCharacteristicData cscLocationData;
+    cscLocationData.setUuid(QBluetoothUuid::SensorLocation);
     const char cscLocationBytes[] = {0x06};
-    cscLocData.setValue(QByteArray(cscLocationBytes, 1));
-    cscLocData.setProperties(QLowEnergyCharacteristic::Read);
+    cscLocationData.setValue(QByteArray(cscLocationBytes, 1));
+    cscLocationData.setProperties(QLowEnergyCharacteristic::Read);
 
     // NOW COLLECT ALL CHARACTERISTICS AND ATTACH TO SERVICE
     QLowEnergyServiceData serviceData;
     serviceData.setType(QLowEnergyServiceData::ServiceTypePrimary);
     serviceData.setUuid(QBluetoothUuid::CyclingSpeedAndCadence);
-    serviceData.addCharacteristic(charData);
-    serviceData.addCharacteristic(cscDescData);
-    serviceData.addCharacteristic(cscLocData);
+    serviceData.addCharacteristic(cscMeasurementData);
+    serviceData.addCharacteristic(cscDescriptionData);
+    serviceData.addCharacteristic(cscLocationData);
 
     // START THE ADVERTISING SERVICE
     const QScopedPointer<QLowEnergyController> leController(QLowEnergyController::createPeripheral());
@@ -92,6 +94,7 @@ int main(int argc, char *argv[])
         unsigned short highRevBit = numberOfRevolutions / (256 * 256);
         unsigned long millisecondsElapsedSinceLastReporting = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - lastReportingTimeInMillis).count();
         QByteArray value;
+
         if (sensorValue == HIGH && lastValue != HIGH)
         {
             numberOfRevolutions += 1;
@@ -113,7 +116,7 @@ int main(int argc, char *argv[])
         QLowEnergyCharacteristic characteristic = service->characteristic(QBluetoothUuid::CSCMeasurement);
         Q_ASSERT(characteristic.isValid());
 
-	// REPORT IF IT HAS BEEN MORE THAN ONE SECOND OR IF THE REVOLUTIONS JUST INCREASED
+        // REPORT IF IT HAS BEEN MORE THAN ONE SECOND OR IF THE REVOLUTIONS JUST INCREASED
         if (millisecondsElapsedSinceLastReporting > 1000 || revsJustChangedFlag == 1)
         {
             lastReportingTimeInMillis = currentMillis;
