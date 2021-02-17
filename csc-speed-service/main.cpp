@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     // first value is the "Wheel Revolution Data Present" flag
     cscDescriptionBytes.append(char(1));
     // second value is the "Crank Revolution Data Present" flag
-    cscDescriptionBytes.append(char(0));
+    cscDescriptionBytes.append(char(1));
     cscDescriptionData.setValue(cscDescriptionBytes);
     cscDescriptionData.setProperties(QLowEnergyCharacteristic::Read);
 
@@ -110,11 +110,19 @@ int main(int argc, char *argv[])
             lastValue = sensorValue;
         }
         sensorValue = digitalRead(SENSOR_PIN);
-        value.append(char(1));            // required for csc data
+        value.append(char(3));            // required for csc data
+	// wheel revolution data uint32
         value.append(char(lowRevBit));    // low bit of revolutions
         value.append(char(midRevBit));    // mid1 bit of revolutions
         value.append(char(highRevBit));   // mid2 bit of revolutions
         value.append(char(0));            // high bit of revolutions.  Not bothering
+	// time data uint16
+        value.append(char(lowMilliBit));  // low bit of milliseconds
+        value.append(char(highMilliBit)); // high bit of milliseconds
+	// crank revolution data uint16
+        value.append(char(lowRevBit));    // low bit of revolutions
+        value.append(char(midRevBit));    // mid1 bit of revolutions
+	// time data uint16
         value.append(char(lowMilliBit));  // low bit of milliseconds
         value.append(char(highMilliBit)); // high bit of milliseconds
         QLowEnergyCharacteristic characteristic = service->characteristic(QBluetoothUuid::CSCMeasurement);
