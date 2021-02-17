@@ -1,3 +1,6 @@
+# executable files
+*.bin
+
 # C++ objects and libs
 *.slo
 *.lo
@@ -31,6 +34,7 @@ Makefile*
 *build-*
 *.qm
 *.prl
+.qmake.stash
 
 # Qt unit tests
 target_wrapper.*
