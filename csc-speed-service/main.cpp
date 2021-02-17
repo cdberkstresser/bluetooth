@@ -103,16 +103,17 @@ int main(int argc, char *argv[])
             lastValue = sensorValue;
         }
         sensorValue = digitalRead(SENSOR_PIN);
-        value.append(char(1));            // Flags that specify the format of the value.
-        value.append(char(lowRevBit));    // Actual value.  low bit of revolutions
-        value.append(char(midRevBit));    // Actual value.                   high bit of revolutions
-        value.append(char(highRevBit));   // Actual value.
-        value.append(char(0));            // Actual value.
-        value.append(char(lowMilliBit));  // Actual value.                 low bit of milliseconds
-        value.append(char(highMilliBit)); // Actual value.                high bit of milliseconds
+        value.append(char(1));            // required for csc data
+        value.append(char(lowRevBit));    // low bit of revolutions
+        value.append(char(midRevBit));    // mid1 bit of revolutions
+        value.append(char(highRevBit));   // mid2 bit of revolutions
+        value.append(char(0));            // high bit of revolutions.  Not bothering
+        value.append(char(lowMilliBit));  // low bit of milliseconds
+        value.append(char(highMilliBit)); // high bit of milliseconds
         QLowEnergyCharacteristic characteristic = service->characteristic(QBluetoothUuid::CSCMeasurement);
         Q_ASSERT(characteristic.isValid());
 
+	// REPORT IF IT HAS BEEN MORE THAN ONE SECOND OR IF THE REVOLUTIONS JUST INCREASED
         if (millisecondsElapsedSinceLastReporting > 1000 || revsJustChangedFlag == 1)
         {
             lastReportingTimeInMillis = currentMillis;
