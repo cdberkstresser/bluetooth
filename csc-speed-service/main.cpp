@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
         auto currentMillis = std::chrono::system_clock::now();
         unsigned long millisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - startMillis).count();
         unsigned short lowMilliBit = millisecondsElapsed % 256;
-        unsigned short highMilliBit = millisecondsElapsed / 256;
+        unsigned short highMilliBit = millisecondsElapsed / 256 % 256;   // make sure it isn't over 255 and just let it overflow
         unsigned short lowRevBit = numberOfRevolutions % 256;
         unsigned short midRevBit = numberOfRevolutions / 256 % 256;
         unsigned short highRevBit = numberOfRevolutions / (256 * 256);
