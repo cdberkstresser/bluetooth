@@ -21,6 +21,10 @@ int main(int argc, char *argv[])
     const int SENSOR_PIN = 8;
     // CYCLE INTERVAL IN MILLISECONDS
     const int TIMER_REPORTING_INTERVAL = 5;
+    // MAXIMUM TIME ALLOWED TO MANUALLY TRIP A NOTIFICATION UPDATE IN MILLISECONDS
+    const int MAX_REPORTING_INTERVAL = 1000;
+    // REPORT REVOLUTIONS AND TIMESTAMP EVERY X REVOLUTIONS OF THE WHEEL
+    const int REVOLUTION_REPORTING_INTERVAL = 1;        // one seems to be okay without overwhelming the receiver
     // SET UP WIRING PI CONNECTION
     wiringPiSetup();
 
@@ -117,10 +121,10 @@ int main(int argc, char *argv[])
         Q_ASSERT(characteristic.isValid());
 
         // REPORT IF IT HAS BEEN MORE THAN ONE SECOND OR IF THE REVOLUTIONS JUST INCREASED
-        if (millisecondsElapsedSinceLastReporting > 1000 || revsJustChangedFlag == 1)
+        if (millisecondsElapsedSinceLastReporting > MAX_REPORTING_INTERVAL || revsJustChangedFlag == REVOLUTION_REPORTING_INTERVAL)
         {
             lastReportingTimeInMillis = currentMillis;
-            service->writeCharacteristic(characteristic, value); // Potentially causes notification.
+            service->writeCharacteristic(characteristic, value); // Do the notify.
         }
     };
     QObject::connect(&cyclingServiceLoop, &QTimer::timeout, cyclingServiceProvider);
