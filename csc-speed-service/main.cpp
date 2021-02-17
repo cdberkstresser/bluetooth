@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     // MAXIMUM TIME ALLOWED TO MANUALLY TRIP A NOTIFICATION UPDATE IN MILLISECONDS
     const int MAX_REPORTING_INTERVAL = 1000;
     // REPORT REVOLUTIONS AND TIMESTAMP EVERY X REVOLUTIONS OF THE WHEEL
-    const int REVOLUTION_REPORTING_INTERVAL = 1;        // one seems to be okay without overwhelming the receiver
+    const int REVOLUTION_REPORTING_INTERVAL = 1; // one seems to be okay without overwhelming the receiver
     // SET UP WIRING PI CONNECTION
     wiringPiSetup();
 
@@ -60,8 +60,9 @@ int main(int argc, char *argv[])
     // SET UP SENSOR LOCATION.  USE RIGHT CRANK FOR IT
     QLowEnergyCharacteristicData cscLocationData;
     cscLocationData.setUuid(QBluetoothUuid::SensorLocation);
-    const char cscLocationBytes[] = {0x06};
-    cscLocationData.setValue(QByteArray(cscLocationBytes, 1));
+    QByteArray cscLocationBytes;
+    cscLocationBytes.append(char(6));
+    cscLocationData.setValue(cscLocationBytes);
     cscLocationData.setProperties(QLowEnergyCharacteristic::Read);
 
     // NOW COLLECT ALL CHARACTERISTICS AND ATTACH TO SERVICE
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
         auto currentMillis = std::chrono::system_clock::now();
         unsigned long millisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - startMillis).count();
         unsigned short lowMilliBit = millisecondsElapsed % 256;
-        unsigned short highMilliBit = millisecondsElapsed / 256 % 256;   // make sure it isn't over 255 and just let it overflow
+        unsigned short highMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
         unsigned short lowRevBit = numberOfRevolutions % 256;
         unsigned short midRevBit = numberOfRevolutions / 256 % 256;
         unsigned short highRevBit = numberOfRevolutions / (256 * 256);
@@ -110,21 +111,26 @@ int main(int argc, char *argv[])
             lastValue = sensorValue;
         }
         sensorValue = digitalRead(SENSOR_PIN);
-        value.append(char(3));            // required for csc data
-	// wheel revolution data uint32
+        value.append(char(3));            // required for csc data 1=wheel, 2=crank, 3=both
+                                          // ************************************
+                                          // WHEEL REVOLUTION DATA uint32
         value.append(char(lowRevBit));    // low bit of revolutions
         value.append(char(midRevBit));    // mid1 bit of revolutions
         value.append(char(highRevBit));   // mid2 bit of revolutions
         value.append(char(0));            // high bit of revolutions.  Not bothering
-	// time data uint16
+                                          // ************************************
+                                          // WHEEL TIME DATA uint16
         value.append(char(lowMilliBit));  // low bit of milliseconds
         value.append(char(highMilliBit)); // high bit of milliseconds
-	// crank revolution data uint16
+                                          // ************************************
+                                          // CRANK REVOLUTION DATA uint16
         value.append(char(lowRevBit));    // low bit of revolutions
         value.append(char(midRevBit));    // mid1 bit of revolutions
-	// time data uint16
+                                          // ************************************
+                                          // CRANK TIME DATA uint16
         value.append(char(lowMilliBit));  // low bit of milliseconds
         value.append(char(highMilliBit)); // high bit of milliseconds
+                                          // ************************************
         QLowEnergyCharacteristic characteristic = service->characteristic(QBluetoothUuid::CSCMeasurement);
         Q_ASSERT(characteristic.isValid());
 
