@@ -18,7 +18,7 @@
 int main(int argc, char *argv[])
 {
     // GPI BCM PIN 2
-    const int SENSOR_PIN = 8;
+    const int WHEEL_SENSOR_PIN = 8;
     // CYCLE INTERVAL IN MILLISECONDS
     const int TIMER_REPORTING_INTERVAL = 5;
     // MAXIMUM TIME ALLOWED TO MANUALLY TRIP A NOTIFICATION UPDATE IN MILLISECONDS
@@ -82,14 +82,16 @@ int main(int argc, char *argv[])
     // DEFINE THE TIMER THAT WILL QUERY THE HALL SENSOR FOR PIN CHANGES
     QTimer cyclingServiceLoop;
     auto startMillis = std::chrono::system_clock::now();
-    pinMode(SENSOR_PIN, INPUT);
+    pinMode(WHEEL_SENSOR_PIN, INPUT);
 
-    int lastValue = digitalRead(SENSOR_PIN);
-    unsigned long numberOfRevolutions = 0;
-    int sensorValue;
+    int lastWheelValue = digitalRead(WHEEL_SENSOR_PIN);
+    unsigned int numberOfRevolutions = 0;
+    unsigned int numberOfCranks = 0;
+    int wheelSensorValue;
     auto lastReportingTimeInMillis = std::chrono::system_clock::now();
-    const auto cyclingServiceProvider = [&service, &startMillis, &sensorValue, &numberOfRevolutions, &lastValue, &lastReportingTimeInMillis]() {
+    const auto cyclingServiceProvider = [&service, &startMillis, &wheelSensorValue, &numberOfRevolutions, &lastWheelValue, &lastReportingTimeInMillis]() {
         int revsJustChangedFlag = 0;
+        int cranksJustChangedFlag = 0;
         auto currentMillis = std::chrono::system_clock::now();
         unsigned long millisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - startMillis).count();
         unsigned short lowMilliBit = millisecondsElapsed % 256;
@@ -100,17 +102,17 @@ int main(int argc, char *argv[])
         unsigned long millisecondsElapsedSinceLastReporting = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - lastReportingTimeInMillis).count();
         QByteArray value;
 
-        if (sensorValue == HIGH && lastValue != HIGH)
+        if (wheelSensorValue == HIGH && lastWheelValue != HIGH)
         {
             numberOfRevolutions += 1;
             revsJustChangedFlag = 1;
-            lastValue = HIGH;
+            lastWheelValue = HIGH;
         }
         else
         {
-            lastValue = sensorValue;
+            lastWheelValue = wheelSensorValue;
         }
-        sensorValue = digitalRead(SENSOR_PIN);
+        wheelSensorValue = digitalRead(WHEEL_SENSOR_PIN);
         value.append(char(3));            // required for csc data 1=wheel, 2=crank, 3=both
                                           // ************************************
                                           // WHEEL REVOLUTION DATA uint32
