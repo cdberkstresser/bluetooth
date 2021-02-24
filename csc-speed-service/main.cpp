@@ -96,8 +96,6 @@ int main(int argc, char *argv[])
     unsigned short highCrankMilliBit  =0;
     auto lastReportingTimeInMillis = std::chrono::system_clock::now();
     const auto cyclingServiceProvider = [&service, &startMillis, &wheelSensorValue, &crankSensorValue, &numberOfRevolutions, &numberOfCranks, &lastWheelValue, &lastCrankValue, &lastReportingTimeInMillis, &lowWheelMilliBit, &highWheelMilliBit, &lowCrankMilliBit, &highCrankMilliBit]() {
-        int revsJustChangedFlag = 0;
-        int cranksJustChangedFlag = 0;
         auto currentMillis = std::chrono::system_clock::now();
         unsigned long millisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - startMillis).count();
         unsigned short lowRevBit = numberOfRevolutions % 256;
@@ -111,7 +109,6 @@ int main(int argc, char *argv[])
         if (wheelSensorValue == HIGH && lastWheelValue != HIGH)
         {
             numberOfRevolutions += 1;
-            revsJustChangedFlag = 1;
             lastWheelValue = HIGH;
             lowWheelMilliBit = millisecondsElapsed % 256;
             highWheelMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
@@ -123,7 +120,6 @@ int main(int argc, char *argv[])
         if (crankSensorValue == HIGH && lastCrankValue != HIGH)
         {
             numberOfCranks += 1;
-            cranksJustChangedFlag = 1;
             lastCrankValue = HIGH;
             lowCrankMilliBit = millisecondsElapsed % 256;
             highCrankMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
