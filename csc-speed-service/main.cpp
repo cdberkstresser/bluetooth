@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     QLowEnergyAdvertisingData advertisingData;
     advertisingData.setDiscoverability(QLowEnergyAdvertisingData::DiscoverabilityGeneral);
     advertisingData.setIncludePowerLevel(true);
-    advertisingData.setLocalName("Berkstresser_Speed");
+    advertisingData.setLocalName("XVNexus_Speed");
     advertisingData.setServices(QList<QBluetoothUuid>() << QBluetoothUuid::CyclingSpeedAndCadence);
 
     // SET UP CHARACTERISTIC DATA FOR SPEED MEASUREMENT
@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
     QTimer cyclingServiceLoop;
     auto startMillis = std::chrono::system_clock::now();
     pinMode(WHEEL_SENSOR_PIN, INPUT);
+    pinMode(CRANK_SENSOR_PIN, INPUT);
 
     int lastWheelValue = digitalRead(WHEEL_SENSOR_PIN);
     int lastCrankValue = digitalRead(CRANK_SENSOR_PIN);
