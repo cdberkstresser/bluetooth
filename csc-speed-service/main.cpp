@@ -21,8 +21,6 @@ int main(int argc, char *argv[])
     const int WHEEL_SENSOR_PIN = 8;
     // CYCLE INTERVAL IN MILLISECONDS
     const int TIMER_REPORTING_INTERVAL = 2;
-    // MAXIMUM TIME ALLOWED TO MANUALLY TRIP A NOTIFICATION UPDATE IN MILLISECONDS
-    const int MAX_REPORTING_INTERVAL = 250;
     // SET UP WIRING PI CONNECTION
     wiringPiSetup();
 
@@ -92,7 +90,7 @@ int main(int argc, char *argv[])
         unsigned short lowRevBit = numberOfRevolutions % 256;
         unsigned short midRevBit = numberOfRevolutions / 256 % 256;
         unsigned short highRevBit = numberOfRevolutions / (256 * 256);
-        unsigned long millisecondsElapsedSinceLastReporting = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - lastReportingTimeInMillis).count();
+        unsigned short sensorChanged = 0;
         QByteArray value;
 
         if (wheelSensorValue == HIGH && lastWheelValue != HIGH)
@@ -101,10 +99,13 @@ int main(int argc, char *argv[])
             lastWheelValue = HIGH;
             lowWheelMilliBit = millisecondsElapsed % 256;
             highWheelMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
+
+	    sensorChanged = 1;
         }
         else
         {
             lastWheelValue = wheelSensorValue;
+	    sensorChanged = 0;
         }
         wheelSensorValue = digitalRead(WHEEL_SENSOR_PIN);
         value.append(char(1));                 // required for csc data 1=wheel, 2=crank, 3=both
@@ -122,12 +123,10 @@ int main(int argc, char *argv[])
         QLowEnergyCharacteristic characteristic = service->characteristic(QBluetoothUuid::CSCMeasurement);
         Q_ASSERT(characteristic.isValid());
 
-        // REPORT IF IT HAS BEEN MORE THAN ONE SECOND OR IF THE REVOLUTIONS JUST INCREASED
-        if (millisecondsElapsedSinceLastReporting > MAX_REPORTING_INTERVAL)
-        {
-            lastReportingTimeInMillis = currentMillis;
+	if (sensorChanged) 
+	{
             service->writeCharacteristic(characteristic, value); // Do the notify.
-        }
+	}
     };
     QObject::connect(&cyclingServiceLoop, &QTimer::timeout, cyclingServiceProvider);
     cyclingServiceLoop.start(TIMER_REPORTING_INTERVAL);
