@@ -48,6 +48,8 @@ int main(int argc, char *argv[])
     QByteArray cscDescriptionBytes;
     // first value is the "Wheel Revolution Data Present" flag
     cscDescriptionBytes.append(char(1));
+    // second value is the "Crank Revolution Data Present" flag
+    cscDescriptionBytes.append(char(0));
     cscDescriptionData.setValue(cscDescriptionBytes);
     cscDescriptionData.setProperties(QLowEnergyCharacteristic::Read);
 
@@ -84,7 +86,8 @@ int main(int argc, char *argv[])
     unsigned short lowWheelMilliBit = 1;
     unsigned short highWheelMilliBit = 0;
     auto lastReportingTimeInMillis = std::chrono::system_clock::now();
-    const auto cyclingServiceProvider = [&service, &startMillis, &wheelSensorValue, &numberOfRevolutions, &lastWheelValue, &lastReportingTimeInMillis, &lowWheelMilliBit, &highWheelMilliBit]() {
+    const auto cyclingServiceProvider = [&service, &startMillis, &wheelSensorValue, &numberOfRevolutions, &lastWheelValue, &lastReportingTimeInMillis, &lowWheelMilliBit, &highWheelMilliBit]()
+    {
         auto currentMillis = std::chrono::system_clock::now();
         unsigned long millisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - startMillis).count();
         unsigned short lowRevBit = numberOfRevolutions % 256;
@@ -100,12 +103,12 @@ int main(int argc, char *argv[])
             lowWheelMilliBit = millisecondsElapsed % 256;
             highWheelMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
 
-	    sensorChanged = 1;
+            sensorChanged = 1;
         }
         else
         {
             lastWheelValue = wheelSensorValue;
-	    sensorChanged = 0;
+            sensorChanged = 0;
         }
         wheelSensorValue = digitalRead(WHEEL_SENSOR_PIN);
         value.append(char(1));                 // required for csc data 1=wheel, 2=crank, 3=both
@@ -123,15 +126,16 @@ int main(int argc, char *argv[])
         QLowEnergyCharacteristic characteristic = service->characteristic(QBluetoothUuid::CSCMeasurement);
         Q_ASSERT(characteristic.isValid());
 
-	if (sensorChanged) 
-	{
+        if (sensorChanged)
+        {
             service->writeCharacteristic(characteristic, value); // Do the notify.
-	}
+        }
     };
     QObject::connect(&cyclingServiceLoop, &QTimer::timeout, cyclingServiceProvider);
     cyclingServiceLoop.start(TIMER_REPORTING_INTERVAL);
 
-    auto reconnect = [&leController, advertisingData, &service, serviceData]() {
+    auto reconnect = [&leController, advertisingData, &service, serviceData]()
+    {
         service.reset(leController->addService(serviceData));
         if (!service.isNull())
             leController->startAdvertising(QLowEnergyAdvertisingParameters(),

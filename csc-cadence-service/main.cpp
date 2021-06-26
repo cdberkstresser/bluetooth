@@ -17,14 +17,10 @@
 
 int main(int argc, char *argv[])
 {
-    // GPI BCM PIN 2
-    const int WHEEL_SENSOR_PIN = 8;
     // GPI BCM PIN 3
     const int CRANK_SENSOR_PIN = 9;
     // CYCLE INTERVAL IN MILLISECONDS
     const int TIMER_REPORTING_INTERVAL = 2;
-    // MAXIMUM TIME ALLOWED TO MANUALLY TRIP A NOTIFICATION UPDATE IN MILLISECONDS
-    const int MAX_REPORTING_INTERVAL = 250;
     // SET UP WIRING PI CONNECTION
     wiringPiSetup();
 
@@ -51,7 +47,7 @@ int main(int argc, char *argv[])
     cscDescriptionData.setUuid(QBluetoothUuid::CSCFeature);
     QByteArray cscDescriptionBytes;
     // first value is the "Wheel Revolution Data Present" flag
-    cscDescriptionBytes.append(char(1));
+    cscDescriptionBytes.append(char(0));
     // second value is the "Crank Revolution Data Present" flag
     cscDescriptionBytes.append(char(1));
     cscDescriptionData.setValue(cscDescriptionBytes);
@@ -82,66 +78,39 @@ int main(int argc, char *argv[])
     // DEFINE THE TIMER THAT WILL QUERY THE HALL SENSOR FOR PIN CHANGES
     QTimer cyclingServiceLoop;
     auto startMillis = std::chrono::system_clock::now();
-    pinMode(WHEEL_SENSOR_PIN, INPUT);
     pinMode(CRANK_SENSOR_PIN, INPUT);
 
-    int lastWheelValue = digitalRead(WHEEL_SENSOR_PIN);
     int lastCrankValue = digitalRead(CRANK_SENSOR_PIN);
     unsigned int numberOfRevolutions = 0;
     unsigned int numberOfCranks = 0;
-    int wheelSensorValue = lastWheelValue;
     int crankSensorValue = lastCrankValue;
-    unsigned short lowWheelMilliBit = 1;
-    unsigned short highWheelMilliBit = 0;
     unsigned short lowCrankMilliBit = 1;
     unsigned short highCrankMilliBit = 0;
     auto lastReportingTimeInMillis = std::chrono::system_clock::now();
-    const auto cyclingServiceProvider = [&service, &startMillis, &wheelSensorValue, &crankSensorValue, &numberOfRevolutions, &numberOfCranks, &lastWheelValue, &lastCrankValue, &lastReportingTimeInMillis, &lowWheelMilliBit, &highWheelMilliBit, &lowCrankMilliBit, &highCrankMilliBit]() {
+    const auto cyclingServiceProvider = [&service, &startMillis, &crankSensorValue, &numberOfCranks, &lastCrankValue, &lastReportingTimeInMillis, &lowCrankMilliBit, &highCrankMilliBit]()
+    {
+        unsigned short sensorChanged = 0;
         auto currentMillis = std::chrono::system_clock::now();
         unsigned long millisecondsElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - startMillis).count();
-        unsigned short lowRevBit = numberOfRevolutions % 256;
-        unsigned short midRevBit = numberOfRevolutions / 256 % 256;
-        unsigned short highRevBit = numberOfRevolutions / (256 * 256);
         unsigned short lowCrankBit = numberOfCranks % 256;
         unsigned short highCrankBit = numberOfCranks / 256 % 256; // make sure it isn't over 255 and just let it overflow
-        unsigned long millisecondsElapsedSinceLastReporting = std::chrono::duration_cast<std::chrono::milliseconds>(currentMillis - lastReportingTimeInMillis).count();
         QByteArray value;
 
-        if (wheelSensorValue == HIGH && lastWheelValue != HIGH)
-        {
-            numberOfRevolutions += 1;
-            lastWheelValue = HIGH;
-            lowWheelMilliBit = millisecondsElapsed % 256;
-            highWheelMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
-        }
-        else
-        {
-            lastWheelValue = wheelSensorValue;
-        }
         if (crankSensorValue == HIGH && lastCrankValue != HIGH)
         {
             numberOfCranks += 1;
             lastCrankValue = HIGH;
             lowCrankMilliBit = millisecondsElapsed % 256;
             highCrankMilliBit = millisecondsElapsed / 256 % 256; // make sure it isn't over 255 and just let it overflow
+            sensorChanged = 1;
         }
         else
         {
             lastCrankValue = crankSensorValue;
+            sensorChanged = 0
         }
-        wheelSensorValue = digitalRead(WHEEL_SENSOR_PIN);
         crankSensorValue = digitalRead(CRANK_SENSOR_PIN);
-        value.append(char(3));                 // required for csc data 1=wheel, 2=crank, 3=both
-                                               // ************************************
-                                               // WHEEL REVOLUTION DATA uint32
-        value.append(char(lowRevBit));         // low bit of revolutions
-        value.append(char(midRevBit));         // mid1 bit of revolutions
-        value.append(char(highRevBit));        // mid2 bit of revolutions
-        value.append(char(0));                 // high bit of revolutions.  Not bothering
-                                               // ************************************
-                                               // WHEEL TIME DATA uint16
-        value.append(char(lowWheelMilliBit));  // low bit of milliseconds
-        value.append(char(highWheelMilliBit)); // high bit of milliseconds
+        value.append(char(2));                 // required for csc data 1=wheel, 2=crank, 3=both
                                                // ************************************
                                                // CRANK REVOLUTION DATA uint16
         value.append(char(lowCrankBit));       // low bit of revolutions
@@ -155,7 +124,7 @@ int main(int argc, char *argv[])
         Q_ASSERT(characteristic.isValid());
 
         // REPORT IF IT HAS BEEN MORE THAN ONE SECOND OR IF THE REVOLUTIONS JUST INCREASED
-        if (millisecondsElapsedSinceLastReporting > MAX_REPORTING_INTERVAL)
+        if (sensorChanged)
         {
             lastReportingTimeInMillis = currentMillis;
             service->writeCharacteristic(characteristic, value); // Do the notify.
@@ -164,7 +133,8 @@ int main(int argc, char *argv[])
     QObject::connect(&cyclingServiceLoop, &QTimer::timeout, cyclingServiceProvider);
     cyclingServiceLoop.start(TIMER_REPORTING_INTERVAL);
 
-    auto reconnect = [&leController, advertisingData, &service, serviceData]() {
+    auto reconnect = [&leController, advertisingData, &service, serviceData]()
+    {
         service.reset(leController->addService(serviceData));
         if (!service.isNull())
             leController->startAdvertising(QLowEnergyAdvertisingParameters(),
