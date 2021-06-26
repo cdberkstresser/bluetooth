@@ -81,7 +81,6 @@ int main(int argc, char *argv[])
     pinMode(CRANK_SENSOR_PIN, INPUT);
 
     int lastCrankValue = digitalRead(CRANK_SENSOR_PIN);
-    unsigned int numberOfRevolutions = 0;
     unsigned int numberOfCranks = 0;
     int crankSensorValue = lastCrankValue;
     unsigned short lowCrankMilliBit = 1;
@@ -107,7 +106,7 @@ int main(int argc, char *argv[])
         else
         {
             lastCrankValue = crankSensorValue;
-            sensorChanged = 0
+            sensorChanged = 0;
         }
         crankSensorValue = digitalRead(CRANK_SENSOR_PIN);
         value.append(char(2));                 // required for csc data 1=wheel, 2=crank, 3=both
